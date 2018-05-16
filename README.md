@@ -71,7 +71,63 @@ public class Receiver implements ChannelAwareMessageListener {
 ## Register the listener and send the message 
 We need to configure the following:
   ### Declare the exchange, queue and the binding between them
-  
+  @Bean
+    DirectExchange exchange() {
+        return new DirectExchange(topicExchangeName);
+    }
+    
+   @Bean
+    Queue queue() {
+        return new Queue(queueName, false);
+    }
+    
+   @Bean
+    DirectExchange exchange() {
+        return new DirectExchange(topicExchangeName);
+    }
+    
   ### A message listener container
-  
+  @Bean
+    SimpleMessageListenerContainer container(ConnectionFactory connectionFactory,
+            MessageListenerAdapter listenerAdapter) {
+        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        container.setQueueNames(queueName);
+        container.setMessageListener(listenerAdapter);
+        return container;
+    }
+    
+  @Bean
+    MessageListenerAdapter listenerAdapter(Receiver receiver) {
+        return new MessageListenerAdapter(receiver, "receiveMessage");
+    }
   ### A component to send some message to test the listener  
+  
+  package hello;
+
+//import java.util.concurrent.TimeUnit;
+
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+@Component
+public class Runner implements CommandLineRunner {
+
+    private final RabbitTemplate rabbitTemplate;
+    //private final Receiver receiver;
+
+    public Runner(Receiver receiver, RabbitTemplate rabbitTemplate) {
+        //this.receiver = receiver;
+        this.rabbitTemplate = rabbitTemplate;
+    }
+
+    @Override
+    public void run(String... args) throws Exception {
+        System.out.println("Sending message...");
+        rabbitTemplate.convertAndSend(Application.topicExchangeName, "foo.bar.baz", "Hello from RabbitMQ!");
+        //receiver.getLatch().await(10000, TimeUnit.MILLISECONDS);
+    }
+
+}
+
